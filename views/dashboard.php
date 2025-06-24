@@ -12,50 +12,49 @@
  * - If the user is verified, displays a confirmation message.
  * - Provides a logout button.
  * - Contains a placeholder section for books or reservations content.
- *
- * Security:
- * - User input and session data are sanitized before output to prevent XSS.
- *
- * Dependencies:
- * - Requires a valid database connection in '../config/db.php'.
- * - Relies on session variables: 'user_id' and 'username'.
- * - Uses external CSS from '../public/css/style.css'.
- *
- * Usage:
- * - Place this file in the 'views' directory of the Book Reservation System.
- * - Ensure the database connection is properly configured in '../config/db.php'.
- * - Access this page after a user logs in to view their dashboard.
- * - The page should be accessed via a web server that supports PHP.
- * - Ensure session management is properly configured in your PHP environment.
- * @package   BookReservation
- * @author    Your Name
- * @copyright Copyright (c) 2024
- * @license   MIT License
- * @version   1.0
  */
 
-// Include database configuration
-require_once '../config/db.php';
-// Start the session
+// Include the application config file first so constants are available
+require_once __DIR__ . '/../config/app_config.php';
+require_once BASE_PATH . '/config/db.php'; // Use BASE_PATH to include db.php
+
 session_start();
 
-// Redirect if there is no active session (user not logged in)
+// Check if user is logged in; if not, redirect to login page
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: " . BASE_URL . "views/login.php");
     exit;
 }
 
-// Get the username from session, sanitize for output
+// Get the username from session, or use 'User' as fallback
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 
-// Query to check if the user is verified and get their email
-$stmt = $pdo->prepare("SELECT is_verified, email FROM users WHERE id = ?");
+// Fetch user verification status, email, and profile image from database
+$stmt = $pdo->prepare("SELECT is_verified, email, profile_image FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();
 
-// Store verification status and email
 $isVerified = $user['is_verified'];
 $email = $user['email'];
+$profileImage = $user['profile_image'];
+
+// Check if profile image exists, otherwise use default image
+if (empty($profileImage) || !file_exists(BASE_PATH . '/uploads/' . $profileImage)) {
+    $profileImage = 'default_profile.png';
+}
+
+// Get the total number of reservations for the user
+$resStmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE user_id = ?");
+$resStmt->execute([$_SESSION['user_id']]);
+$totalReservations = $resStmt->fetchColumn();
+
+// Fetch actual reservations for display
+$reservations = [];
+if ($totalReservations > 0) {
+    $resStmt = $pdo->prepare("SELECT title, author FROM reservations WHERE user_id = ?");
+    $resStmt->execute([$_SESSION['user_id']]);
+    $reservations = $resStmt->fetchAll();
+}
 ?>
 
 <!DOCTYPE html>
@@ -65,66 +64,108 @@ $email = $user['email'];
     <meta charset="UTF-8">
     <title>Dashboard - Book Reservation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Link to external CSS -->
-    <link rel="stylesheet" href="../public/css/style.css?v=<?= time(); ?>">
-
+    <!-- Main stylesheet with cache busting -->
+    <link rel="stylesheet" href="<?= BASE_URL ?>public/css/style.css?v=<?= time(); ?>">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
-    <div class="background-overlay">
-
-    </div>
-
-    <?php include 'partials/navbar.php'; ?>
-
+    <div class="background-overlay"></div>
+    <!-- Include navigation bar -->
+    <?php include BASE_PATH . '/views/partials/navbar.php'; ?> 
     <div class="dashboard-container">
-        <!-- Welcome message with highlighted username -->
-        <h1 class="welcome-title">Welcome back, <span class="highlight"><?= $username?></span><span class="exclamation">!</span></h1>
-        <p>You can now browse and manage your book reservations.</p>
+        <div class="user-info-grid">
+            <div class="user-details">
+                <!-- Display welcome message and total reservations -->
+                <p><i class="fas fa-user-circle"></i> <span class="label">¡Welcome back!</span> <strong>
+                        <?= $username ?>
+                    </strong></p>
+                <p><i class="fas fa-book"></i> <span class="label">Total reserves:</span> <strong>
+                        <?= $totalReservations ?>
+                    </strong></p>
+            </div>
+            <div class="user-photo">
+                <!-- Show profile image or default avatar -->
+                <?php if ($profileImage && $profileImage !== 'default_profile.png'): ?>
+                <img src="<?= BASE_URL ?>uploads/<?= htmlspecialchars($profileImage) ?>" alt="Profile Picture"
+                    class="profile-summary-pic">
+                <?php else: ?>
+                <div class="default-avatar-icon"><i class="fas fa-user"></i></div>
+                <?php endif; ?>
+            </div>
+        </div>
 
-        <!-- Show success message if verification email was resent -->
-        <?php if (isset($_GET['resent'])): ?>
-        <p class="success">✅ Verification email has been resent to
-            <?= htmlspecialchars($email) ?>.
-        </p>
-        <?php endif; ?>
-
-        <!-- Show warning if user is not verified, with option to resend verification email -->
+        <!-- If user is not verified, show warning and resend verification form -->
         <?php if (!$isVerified): ?>
         <div class="warning-box">
             <p>⚠️ Please confirm your email address to enable book reservations.</p>
-            <form method="POST" action="../controllers/resend_verification.php">
+            <form method="POST" action="<?= BASE_URL ?>controllers/resend_verification.php">
                 <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
                 <button type="submit">Resend verification email</button>
             </form>
         </div>
         <?php else: ?>
-        <!-- Show success message if user is verified -->
-        <p class="success">✅ Your email is verified. You can make reservations.</p>
+        <!-- If user is verified, show confirmation message -->
+        <p class="success" id="verified-message">✅ Your email is verified. You can make reservations.</p>
         <?php endif; ?>
 
-        <!-- Logout button
-        <a href="../controllers/logout.php" class="logout-button">Logout</a> -->
+        <h2 class="section-title">My reserves 📚</h2>
 
-        <!-- Placeholder for books or reservations content -->
-        <div class="dashboard-content">
-            <h2>📚 Books or Reservations will go here</h2>
-        </div>
+        <!-- Reservations table -->
+        <table class="reservation-table">
+            <thead>
+                <tr>
+                    <th data-label="Title">Title</th>
+                    <th data-label="Author">Author</th>
+                    <th data-label="Action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($totalReservations > 0): ?>
+                <?php foreach ($reservations as $row): ?>
+                <tr>
+                    <td data-label="Title">
+                        <?= htmlspecialchars($row['title']) ?>
+                    </td>
+                    <td data-label="Author">
+                        <?= htmlspecialchars($row['author']) ?>
+                    </td>
+                    <td data-label="Action"><a href="#" class="delete-btn">delete</a></td>
+                </tr>
+                <?php endforeach; ?>
+                <?php else: ?>
+                <tr>
+                    <td colspan="3">No reservations found.</td>
+                </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
-    <?php include 'partials/footer.php'; ?>
+
+    <!-- Include footer -->
+    <?php include BASE_PATH . '/views/partials/footer.php'; ?> 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Navbar burger menu toggle for mobile
             const toggleButton = document.getElementById('burger-btn');
             const navbar = document.querySelector('.navbar');
             const collapseMenu = document.getElementById('navbar-menu');
 
-            toggleButton.addEventListener('click', () => {
+            toggleButton?.addEventListener('click', () => {
                 navbar.classList.toggle('active');
                 collapseMenu.classList.toggle('active');
             });
+
+            // Hide verified message after 5 seconds
+            const verifiedMsg = document.getElementById('verified-message');
+            if (verifiedMsg) {
+                setTimeout(() => {
+                    verifiedMsg.style.display = 'none';
+                }, 5000);
+            }
         });
     </script>
-
 </body>
 
 </html>

@@ -6,12 +6,10 @@
  * Users can create a new account by providing their email, username, and password.
  * The form includes client-side validation for password strength and matching.
  *
- * @package   BookReservation
- * @author    Your Name
- * @copyright Copyright (c) 2024
- * @license   MIT License
- * @version   1.0
  */
+
+// Incluye el archivo de configuración de la aplicación para acceder a las constantes BASE_PATH y BASE_URL
+require_once __DIR__ . '/../config/app_config.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -19,66 +17,55 @@
     <meta charset="UTF-8">
     <title>Register - Book Reservation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Link to main stylesheet -->
-    <link rel="stylesheet" href="../public/css/style.css">
-    <!-- Link to Font Awesome for icons -->
+    <link rel="stylesheet" href="<?= BASE_URL ?>public/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="background-overlay"></div>
     <div class="main-content">
         <div class="welcome-message">
-        <h1>Create Your Account</h1>
-        <p>Register to start reserving books from our library.</p>
-    </div>
+            <h1>Create Your Account</h1>
+            <p>Register to start reserving books from our library.</p>
+        </div>
 
-    <div class="form-container">
-        <!-- Registration form -->
-        <form method="POST" action="../controllers/register_process.php" onsubmit="return validateForm();">
-            <label for="email">Email:</label>
-            <!-- Email input field -->
-            <input type="email" name="email" required placeholder="Enter your email">
+        <div class="form-container">
+            <form method="POST" action="<?= BASE_URL ?>controllers/register_process.php" onsubmit="return validateForm();">
+                <label for="email">Email:</label>
+                <input type="email" name="email" required placeholder="Enter your email">
 
-            <label for="username">Username:</label>
-            <!-- Username input field -->
-            <input type="text" name="username" required placeholder="Choose a username">
+                <label for="username">Username:</label>
+                <input type="text" name="username" required placeholder="Choose a username">
 
-            <label for="password">Password:</label>
-            <div class="password-container">
-                <!-- Password input field -->
-                <input type="password" id="password" name="password" required placeholder="Create a strong password">
-                <!-- Icon to show/hide password -->
-                <span class="toggle-password" onclick="togglePasswordVisibility(this)">
-                    <i class="fas fa-eye"></i>
-                </span>
-            </div>
-            <!-- Warning message for password -->
-            <small id="password-warning" class="error" style="display:none;"></small>
+                <label for="password">Password:</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" required placeholder="Create a strong password">
+                    <span class="toggle-password" onclick="togglePasswordVisibility(this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <small id="password-warning" class="error" style="display:none;"></small>
 
-            <label for="confirm-password">Confirm Password:</label>
-            <div class="password-container">
-                <!-- Confirm password input field -->
-                <input type="password" id="confirm-password" name="confirm_password" required  placeholder="Repeat your password" >
-                <!-- Icon to show/hide confirm password -->
-                <span class="toggle-password" onclick="togglePasswordVisibility(this)">
-                    <i class="fas fa-eye"></i>
-                </span>
-            </div>
-            <!-- Warning message for password confirmation -->
-            <small id="confirm-warning" class="error" style="display:none;"></small>
+                <label for="confirm-password">Confirm Password:</label>
+                <div class="password-container">
+                    <input type="password" id="confirm-password" name="confirm_password" required placeholder="Repeat your password">
+                    <span class="toggle-password" onclick="togglePasswordVisibility(this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <small id="confirm-warning" class="error" style="display:none;"></small>
 
-            <button type="submit">Register</button>
+                <button type="submit">Register</button>
 
-            <!-- Success or error messages from PHP -->
-            <?php if (isset($_GET['success'])): ?>
-                <p class="success">✅ Account created successfully!</p>
-            <?php elseif (isset($_GET['error'])): ?>
-                <p class="error">❌ <?php echo htmlspecialchars($_GET['error']); ?></p>
-            <?php endif; ?>
-        </form>
+                <?php if (isset($_GET['success'])): ?>
+                    <p class="success">✅ Account created successfully!</p>
+                <?php elseif (isset($_GET['error'])): ?>
+                    <p class="error">❌ <?php echo htmlspecialchars($_GET['error']); ?></p>
+                <?php endif; ?>
+            </form>
 
-        <p>Already have an account? <a href="login.php">Sign in here</a></p>
-        <p>By registering, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
+            <p>Already have an account? <a href="<?= BASE_URL ?>views/login.php">Sign in here</a></p>
+            <p>By registering, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
+        </div>
     </div>
 
     <script>
@@ -98,7 +85,7 @@
 
         // Check password strength
         if (!isPasswordStrong(pw)) {
-            alert("Your password is too weak.");
+            alert("Your password is too weak. It must be at least 8 characters long and include uppercase, lowercase, and a number.");
             return false;
         }
 
@@ -147,8 +134,5 @@
         });
     });
     </script>
-
-    </div>
-    
 </body>
 </html>
